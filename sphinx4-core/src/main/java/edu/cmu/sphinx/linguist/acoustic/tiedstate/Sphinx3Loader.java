@@ -11,6 +11,8 @@
  */
 package edu.cmu.sphinx.linguist.acoustic.tiedstate;
 
+import edu.cmu.sphinx.decoder.adaptation.DensityFileData;
+import edu.cmu.sphinx.decoder.adaptation.MllrDecoding;
 import edu.cmu.sphinx.linguist.acoustic.*;
 import static edu.cmu.sphinx.linguist.acoustic.tiedstate.Pool.Feature.*;
 import edu.cmu.sphinx.util.ExtendedStreamTokenizer;
@@ -130,6 +132,12 @@ public class Sphinx3Loader implements Loader {
     @S4String(mandatory = false, defaultValue = "")
     public final static String PROP_DATA_LOCATION = "dataLocation";
 
+    /** 
+     * The location of the mllr matrix file (not tested)
+     */
+    @S4String(mandatory = true)
+    public final static String MLLR_MATRIX = "mllrmatrix"; 
+
     /**
      * The property specifying whether context-dependent units should be used.
      */
@@ -205,6 +213,17 @@ public class Sphinx3Loader implements Loader {
     protected boolean useCDUnits;
     private boolean loaded;
 
+    // the path to mllr matrix file (not tested)
+    protected String mllrlocation;
+
+    public Sphinx3Loader(URL location, String model, String dataLocation,
+            UnitManager unitManager, float distFloor, float mixtureWeightFloor,
+            float varianceFloor, boolean useCDUnits, String mllr) {
+
+        init(location, model, dataLocation, unitManager, distFloor,
+                mixtureWeightFloor, varianceFloor, useCDUnits,
+                Logger.getLogger(getClass().getName()), mllr);
+    }
     public Sphinx3Loader(URL location, String model, String dataLocation,
             UnitManager unitManager, float distFloor, float mixtureWeightFloor,
             float varianceFloor, boolean useCDUnits) {
@@ -214,6 +233,17 @@ public class Sphinx3Loader implements Loader {
                 Logger.getLogger(getClass().getName()));
     }
 
+    public Sphinx3Loader(String location, String model, String dataLocation,
+            UnitManager unitManager, float distFloor, float mixtureWeightFloor,
+            float varianceFloor, boolean useCDUnits, String mllr)
+            throws MalformedURLException, ClassNotFoundException {
+
+        init(ConfigurationManagerUtils.resourceToURL(location), model,
+                dataLocation, unitManager, distFloor, mixtureWeightFloor,
+                varianceFloor, useCDUnits,
+                Logger.getLogger(getClass().getName()), mllr);
+    }
+    
     public Sphinx3Loader(String location, String model, String dataLocation,
             UnitManager unitManager, float distFloor, float mixtureWeightFloor,
             float varianceFloor, boolean useCDUnits)
@@ -239,7 +269,37 @@ public class Sphinx3Loader implements Loader {
         this.varianceFloor = varianceFloor;
         this.useCDUnits = useCDUnits;
     }
+    
+    protected void init(URL location, String model, String dataLocatoin,
+            UnitManager unitManager, float distFloor, float mixtureWeightFloor,
+            float varianceFloor, boolean useCDUnits, Logger logger, String mllrlocation) {
+        logMath = LogMath.getInstance();
+        this.location = location;
+        this.logger = logger;
+        this.model = model;
+        this.dataLocation = dataLocatoin;
+        this.unitManager = unitManager;
+        this.distFloor = distFloor;
+        this.mixtureWeightFloor = mixtureWeightFloor;
+        this.varianceFloor = varianceFloor;
+        this.useCDUnits = useCDUnits;
+        this.mllrlocation = mllrlocation;
+    }
 
+
+     /**
+     * Update the means file
+     * @param path
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    public void changeMeanFile(DensityFileData newMeans) throws IOException, URISyntaxException {
+    	meansPool = newMeans.getPool();
+    	numGaussiansPerState = newMeans.getNumGaussiansPerState();
+    	numStates = newMeans.getNumStates();
+    	numStreams = newMeans.getNumStreams();
+    	vectorLength = newMeans.getVectorLength();
+    }
     public Sphinx3Loader() {
 
     }
@@ -271,7 +331,7 @@ public class Sphinx3Loader implements Loader {
                 (UnitManager) ps.getComponent(PROP_UNIT_MANAGER),
                 ps.getFloat(PROP_MC_FLOOR), ps.getFloat(PROP_MW_FLOOR),
                 ps.getFloat(PROP_VARIANCE_FLOOR),
-                ps.getBoolean(PROP_USE_CD_UNITS), ps.getLogger());
+                ps.getBoolean(PROP_USE_CD_UNITS), ps.getLogger(), ps.getString(MLLR_MATRIX));
     }
 
     // This function is a bit different from the
@@ -304,10 +364,23 @@ public class Sphinx3Loader implements Loader {
                 throw new RuntimeException(e);
             }
 
+            if(mllrlocation != null) {
+            	MllrDecoding mllrd = new MllrDecoding(this, mllrlocation);
+            	try {
+					mllrd.decodeWithMllr();
+				} catch (URISyntaxException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+            }
             // done
             loaded = true;
             TimerPool.getTimer(this, "Load AM").stop();
         }
+    }
+    
+    public String getMllrLocation(){
+    	return mllrlocation;
     }
 
     /**
