@@ -133,10 +133,10 @@ public class Sphinx3Loader implements Loader {
     public final static String PROP_DATA_LOCATION = "dataLocation";
 
     /** 
-     * The location of the mllr matrix file (not tested)
+     * The location of the adaptation file
      */
-    @S4String(mandatory = true)
-    public final static String MLLR_MATRIX = "mllrmatrix"; 
+    @S4String(mandatory = false)
+    public final static String ADAPTATION = "adaptationFile"; 
 
     /**
      * The property specifying whether context-dependent units should be used.
@@ -214,15 +214,15 @@ public class Sphinx3Loader implements Loader {
     private boolean loaded;
 
     // the path to mllr matrix file (not tested)
-    protected String mllrlocation;
+    protected String adaptation;
 
     public Sphinx3Loader(URL location, String model, String dataLocation,
             UnitManager unitManager, float distFloor, float mixtureWeightFloor,
-            float varianceFloor, boolean useCDUnits, String mllr) {
+            float varianceFloor, boolean useCDUnits, String adaptation) {
 
         init(location, model, dataLocation, unitManager, distFloor,
                 mixtureWeightFloor, varianceFloor, useCDUnits,
-                Logger.getLogger(getClass().getName()), mllr);
+                Logger.getLogger(getClass().getName()), adaptation);
     }
     public Sphinx3Loader(URL location, String model, String dataLocation,
             UnitManager unitManager, float distFloor, float mixtureWeightFloor,
@@ -235,13 +235,13 @@ public class Sphinx3Loader implements Loader {
 
     public Sphinx3Loader(String location, String model, String dataLocation,
             UnitManager unitManager, float distFloor, float mixtureWeightFloor,
-            float varianceFloor, boolean useCDUnits, String mllr)
+            float varianceFloor, boolean useCDUnits, String adaptation)
             throws MalformedURLException, ClassNotFoundException {
 
         init(ConfigurationManagerUtils.resourceToURL(location), model,
                 dataLocation, unitManager, distFloor, mixtureWeightFloor,
                 varianceFloor, useCDUnits,
-                Logger.getLogger(getClass().getName()), mllr);
+                Logger.getLogger(getClass().getName()), adaptation);
     }
     
     public Sphinx3Loader(String location, String model, String dataLocation,
@@ -272,7 +272,7 @@ public class Sphinx3Loader implements Loader {
     
     protected void init(URL location, String model, String dataLocatoin,
             UnitManager unitManager, float distFloor, float mixtureWeightFloor,
-            float varianceFloor, boolean useCDUnits, Logger logger, String mllrlocation) {
+            float varianceFloor, boolean useCDUnits, Logger logger, String adaptation) {
         logMath = LogMath.getInstance();
         this.location = location;
         this.logger = logger;
@@ -283,7 +283,7 @@ public class Sphinx3Loader implements Loader {
         this.mixtureWeightFloor = mixtureWeightFloor;
         this.varianceFloor = varianceFloor;
         this.useCDUnits = useCDUnits;
-        this.mllrlocation = mllrlocation;
+        this.adaptation = adaptation;
     }
 
 
@@ -331,7 +331,7 @@ public class Sphinx3Loader implements Loader {
                 (UnitManager) ps.getComponent(PROP_UNIT_MANAGER),
                 ps.getFloat(PROP_MC_FLOOR), ps.getFloat(PROP_MW_FLOOR),
                 ps.getFloat(PROP_VARIANCE_FLOOR),
-                ps.getBoolean(PROP_USE_CD_UNITS), ps.getLogger(), ps.getString(MLLR_MATRIX));
+                ps.getBoolean(PROP_USE_CD_UNITS), ps.getLogger(), ps.getString(ADAPTATION));
     }
 
     // This function is a bit different from the
@@ -364,8 +364,8 @@ public class Sphinx3Loader implements Loader {
                 throw new RuntimeException(e);
             }
 
-            if(mllrlocation != null) {
-            	MllrDecoding mllrd = new MllrDecoding(this, mllrlocation);
+            if(adaptation != null) {
+            	MllrDecoding mllrd = new MllrDecoding(this, adaptation);
             	try {
 					mllrd.decodeWithMllr();
 				} catch (URISyntaxException e) {
@@ -379,8 +379,8 @@ public class Sphinx3Loader implements Loader {
         }
     }
     
-    public String getMllrLocation(){
-    	return mllrlocation;
+    public String getAdaptationLocation(){
+    	return adaptation;
     }
 
     /**
