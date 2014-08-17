@@ -22,7 +22,7 @@ public class DecodingWithMllr {
 		
 		StreamSpeechRecognizer recognizer = new StreamSpeechRecognizer(configuration);
 		InputStream stream = TranscriberDemo.class.getResourceAsStream(
-                "/edu/cmu/sphinx/demo/decodingMllr/JamesCameron_2010_310.25_329.97.wav");
+                "/edu/cmu/sphinx/demo/mllrdecoding/JamesCameron_2010_310.25_329.97.wav");
 
 		Sphinx3Loader loader = (Sphinx3Loader) recognizer.getLoader();
 		System.out.println(loader);
@@ -39,10 +39,6 @@ public class DecodingWithMllr {
 		while ((result = recognizer.getResult()) != null) {
             System.out.format("Hypothesis: %s\n", result.getHypothesis());
         }
-	
-		if(result == null)
-			System.out.println("sad recognizer");
-		
 		recognizer.stopRecognition();
 	}
 }
