@@ -17,9 +17,9 @@ public class MllrDecoding {
 	private Scanner input;
 	private MllrTransformer mllrmat;
 	private Sphinx3Loader loader;
-	private String location;
+//	private String location;
 	private float varFlor;
-	private String model;
+//	private String model;
 	private String mllrFilePath;
 
 
@@ -27,8 +27,8 @@ public class MllrDecoding {
 	public MllrDecoding(Sphinx3Loader loader, String mllrFilePath) {
 		this.loader = loader;
 		this.mllrFilePath = mllrFilePath;
-		this.location = "/home/gia/Work/CMUSphinx/me/en-us/";
-		this.model = "en-us";
+//		this.location = "/home/gia/Work/CMUSphinx/me/en-us/";
+//		this.model = "en-us";
 		this.varFlor = (float) 1e-5;
 
 	}
@@ -48,7 +48,7 @@ public class MllrDecoding {
 		oldFileMeans.setVectorLength(loader.getVectorLength());
 		
 		this.mllrmat = new MllrTransformer(oldFileMeans, A, B, "nothing");
-		mllrmat.adaptMean();
+		mllrmat.transform();
 		loader.changeMeanFile(mllrmat.getMeans());
 		
 	}
