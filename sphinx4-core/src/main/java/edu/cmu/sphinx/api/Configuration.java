@@ -29,12 +29,23 @@ public class Configuration {
     private String grammarPath;
     private String grammarName;
 
+    private String adaptationFile;
     private int sampleRate = 16000;
     private boolean useGrammar = false;
+
+    public String getAdaptationFile() {
+    	return adaptationFile;
+    }
+
+
+    public void setAdaptationFile(String adaptationFile) {
+    	this.adaptationFile = adaptationFile;
+    }
 
     /**
      * Returns path to acoustic model.
      */
+
     public String getAcousticModelPath() {
         return acousticModelPath;
     }
