@@ -65,12 +65,22 @@ public class Context {
             setGrammar(config.getGrammarPath(), config.getGrammarName());
         if (null != config.getLanguageModelPath() && !config.getUseGrammar())
             setLanguageModel(config.getLanguageModelPath());
-            
+
+        if(null != config.getAdaptationFile())
+        	setAdaptationFile(config.getAdaptationFile());
+
         setSampleRate(config.getSampleRate());
 
         // Force ConfigurationManager to build the whole graph
         // in order to enable instance lookup by class.
         configurationManager.lookup("recognizer");
+    }
+
+    /** 
+     * Set adaptation file location
+     */
+    public void setAdaptationFile(String path) throws IOException {
+    	setLocalProperty("acousticModelLoader->adaptationFile", path);
     }
 
     /**
