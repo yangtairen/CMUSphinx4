@@ -7,31 +7,26 @@ import java.net.URISyntaxException;
 import edu.cmu.sphinx.api.Configuration;
 import edu.cmu.sphinx.api.SpeechResult;
 import edu.cmu.sphinx.api.StreamSpeechRecognizer;
-import edu.cmu.sphinx.decoder.adaptation.MllrDecoding;
 import edu.cmu.sphinx.demo.transcriber.TranscriberDemo;
-import edu.cmu.sphinx.linguist.acoustic.tiedstate.Sphinx3Loader;
-
+/**
+ * Decoding with a specific mllr file
+ * @author gia
+ *
+ */
 public class DecodingWithMllr {
 	public static void main(String[] args) throws IOException, URISyntaxException {
 		
 		Configuration configuration = new Configuration();
 		
-		configuration.setAcousticModelPath("/home/gia/Work/CMUSphinx/Task6/en-us/");
-		configuration.setDictionaryPath("/home/gia/Work/CMUSphinx/Task6/tedlium.dic");
-		configuration.setLanguageModelPath("/home/gia/Work/CMUSphinx/Task6/cmusphinx-5.0-en-us.lm.dmp");
+		configuration.setAcousticModelPath("/home/gia/Work/Task1/en-us/");
+		configuration.setDictionaryPath("/home/gia/Work/Task1/tedlium.dic");
+		configuration.setLanguageModelPath("/home/gia/Work/Task1/cmusphinx-5.0-en-us.lm.dmp");
+		configuration.setAdaptationFile("/home/gia/Work/Task1/mllr_matrix");
 		
 		StreamSpeechRecognizer recognizer = new StreamSpeechRecognizer(configuration);
 		InputStream stream = TranscriberDemo.class.getResourceAsStream(
                 "/edu/cmu/sphinx/demo/mllrdecoding/JamesCameron_2010_310.25_329.97.wav");
 
-		Sphinx3Loader loader = (Sphinx3Loader) recognizer.getLoader();
-		System.out.println(loader);
-		
-		String filePath = "/home/gia/Work/CMUSphinx/Task1/mllr_setup/data/JamesCameron_2010/mllr_matrix";
-		MllrDecoding test = new MllrDecoding(loader, filePath);
-		test.decodeWithMllr();
-		
-		loader = test.getNewLoader();
 		recognizer.startRecognition(stream, false);
 		
 		SpeechResult result;
