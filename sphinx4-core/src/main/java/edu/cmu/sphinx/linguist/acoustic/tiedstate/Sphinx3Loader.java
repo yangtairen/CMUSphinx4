@@ -363,16 +363,6 @@ public class Sphinx3Loader implements Loader {
             } catch (URISyntaxException e) {
                 throw new RuntimeException(e);
             }
-
-            if(adaptation != null) {
-            	MllrDecoding mllrd = new MllrDecoding(this, adaptation);
-            	try {
-					mllrd.decodeWithMllr();
-				} catch (URISyntaxException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-            }
             // done
             loaded = true;
             TimerPool.getTimer(this, "Load AM").stop();
@@ -445,6 +435,16 @@ public class Sphinx3Loader implements Loader {
         loadHMMPool(useCDUnits, modelStream, this.model);
 
         modelProps = loadModelProps(dataLocation + "feat.params");
+        
+        if(adaptation != null) {
+        	MllrDecoding mllrd = new MllrDecoding(this, adaptation);
+        	try {
+				mllrd.decodeWithMllr();
+			} catch (URISyntaxException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+        }
     }
 
     public Map<String, Unit> getContextIndependentUnits() {
