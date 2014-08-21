@@ -11,16 +11,10 @@
 
 package edu.cmu.sphinx.api;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
 
-import edu.cmu.sphinx.decoder.adaptation.CountsCollector;
-import edu.cmu.sphinx.decoder.adaptation.DensityFileData;
-import edu.cmu.sphinx.decoder.adaptation.MllrEstimation;
-import edu.cmu.sphinx.decoder.adaptation.MllrTransformer;
 import edu.cmu.sphinx.linguist.acoustic.tiedstate.Loader;
-import edu.cmu.sphinx.linguist.acoustic.tiedstate.Sphinx3Loader;
 import edu.cmu.sphinx.recognizer.Recognizer;
 import edu.cmu.sphinx.result.Result;
 
@@ -33,10 +27,7 @@ public class AbstractSpeechRecognizer {
 	protected final Recognizer recognizer;
 
 	protected final SpeechSourceProvider speechSourceProvider;
-
-	protected boolean collectStatsForAdaptation;
-	private MllrEstimation estimation;
-	private CountsCollector cc;
+	public final SpeakerProfile profile;
 
 	/**
 	 * Constructs recognizer object using provided configuration.
@@ -50,67 +41,40 @@ public class AbstractSpeechRecognizer {
 		this.context = context;
 		recognizer = context.getInstance(Recognizer.class);
 		speechSourceProvider = new SpeechSourceProvider();
+		profile = new SpeakerProfile(this.context);
 	}
 
-	protected void initAdaptation() throws Exception {
-		this.collectStatsForAdaptation = true;
-		Sphinx3Loader loader = (Sphinx3Loader) context.getLoader();
-		this.cc = new CountsCollector(loader.getVectorLength(),
-				loader.getNumStates(), loader.getNumStreams(),
-				loader.getNumGaussiansPerState());
-	}
-
-	private MllrTransformer getTransformer() throws Exception {
-		Sphinx3Loader loader = (Sphinx3Loader) context.getLoader();
-		DensityFileData means = new DensityFileData("", -Float.MAX_VALUE,
-				loader, false);
-		MllrTransformer transformer;
-
-		if (!this.estimation.isComplete()) {
-			this.estimation.estimateMatrices();
-		}
-
-		means.getMeansFromLoader();
-		transformer = new MllrTransformer(means, estimation.getA(),
-				estimation.getB(), "");
-		transformer.transform();
-
-		return transformer;
-	}
-
-	public void writeTransformationToFile(String filepath) throws Exception {
-		if (!this.estimation.isComplete()) {
-			this.estimation.estimateMatrices();
-		}
-
-		this.estimation.setOutputFilePath(filepath);
-
-		try {
-			estimation.createMllrFile();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		}
+	public void initAdaptation() throws Exception {
+		profile.initialization();
+		this.setAdaptationPath("/home/gia/Work/Task1/mllr_matrix");
 	}
 
 	protected void adaptCurrentModel() throws Exception {
-		this.estimation = new MllrEstimation("", 1, "", false, cc.getCounts(),
-				"", false, this.getLoader());
-		MllrTransformer transformer = this.getTransformer();
-
-		// TODO : adapt current model
+		profile.reestimate();
+		
 	}
 
+	public void adaptOffline() throws IOException, URISyntaxException {
+		profile.adapt();
+	}
+	
+	public void setAdaptationPath(String filePath) {
+		profile.adaptationPath = filePath;
+		
+	}
+	
+	public void getFile() throws Exception {
+		profile.getAdaptationFile();
+	}
 	/**
 	 * Returns result of the recognition.
 	 */
 	public SpeechResult getResult() {
 		Result result = recognizer.recognize();
 
-		if (this.collectStatsForAdaptation && result != null) {
+		if (profile.getCollectStatsForAdaptation() && result != null) {
 			try {
-				cc.collect(result);
+				profile.getCountsCollector().collect(result);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -118,11 +82,12 @@ public class AbstractSpeechRecognizer {
 
 		return null == result ? null : new SpeechResult(result);
 	}
-
+	
 	/**
 	 * Returns the Loader object used for loading the acoustic model.
 	 */
 	public Loader getLoader() {
 		return (Loader) context.getLoader();
 	}
+	
 }
