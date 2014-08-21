@@ -17,9 +17,7 @@ public class MllrDecoding {
 	private Scanner input;
 	private MllrTransformer mllrmat;
 	private Sphinx3Loader loader;
-//	private String location;
 	private float varFlor;
-//	private String model;
 	private String mllrFilePath;
 
 
@@ -27,8 +25,6 @@ public class MllrDecoding {
 	public MllrDecoding(Sphinx3Loader loader, String mllrFilePath) {
 		this.loader = loader;
 		this.mllrFilePath = mllrFilePath;
-//		this.location = "/home/gia/Work/CMUSphinx/me/en-us/";
-//		this.model = "en-us";
 		this.varFlor = (float) 1e-5;
 
 	}
@@ -53,15 +49,13 @@ public class MllrDecoding {
 		
 	}
 	
-	public Sphinx3Loader getNewLoader(){
-		return loader;
-	}
+
 	/**
 	 * Read the adaptation file 
 	 * @param filePath
 	 * @throws FileNotFoundException
 	 */ 
-	private void readMllrMatrix(String filePath) throws FileNotFoundException {
+	public void readMllrMatrix(String filePath) throws FileNotFoundException {
 
 		input = new Scanner(new File(filePath));
 		int[] vectorLength = new int[5];
