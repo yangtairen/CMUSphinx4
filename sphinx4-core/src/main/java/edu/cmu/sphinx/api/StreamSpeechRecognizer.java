@@ -37,7 +37,7 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
     	//TODO: access frontend for buffering the sent results
     	while (this.getResult() != null);
     	this.adaptCurrentModel();
-    	this.collectStatsForAdaptation = false;
+    	this.profile.setCollectStatsForAdaptation(false);
     }
 
     /**
@@ -46,21 +46,29 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
      * Starts recognition process and optionally clears previous data.
      *
      * @param clear clear cached microphone data
+     * @throws Exception 
      * @see         StreamSpeechRecognizer#stopRecognition()
      */
-    public void startRecognition(InputStream stream, boolean useOnlineAdaptation) {
+    public void startRecognition(InputStream stream, boolean useOnlineAdaptation) throws Exception {
         recognizer.allocate();
         context.setSpeechSource(stream);
-        if(useOnlineAdaptation){
-        	try {
-				this.initAdaptation();
-				this.adaptOnline();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+        
+        this.initAdaptation();
+        
+        if(useOnlineAdaptation) {
+        	this.adaptOnline();
+        }
+        else {
+        	this.adaptOffline();
         }
     }
 
+    
+    public void startRecognition(InputStream stream) throws Exception {
+        recognizer.allocate();
+        context.setSpeechSource(stream);
+    }
+    
 	/**
      * Stops recognition process.
      *
