@@ -33,10 +33,10 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
         super(configuration);
     }
     
-    private void adaptOnline() throws Exception {
+    private void adaptOnline(String path) throws Exception {
     	//TODO: access frontend for buffering the sent results
     	while (this.getResult() != null);
-    	this.adaptCurrentModel();
+    	this.adaptCurrentModel(path);
     	this.profile.setCollectStatsForAdaptation(false);
     }
 
@@ -53,13 +53,15 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
         recognizer.allocate();
         context.setSpeechSource(stream);
         
+        String path = "/home/gia/Work/mllr_matrix";
+        
         this.initAdaptation();
         
         if(useOnlineAdaptation) {
-        	this.adaptOnline();
+        	this.adaptOnline(path);
         }
         else {
-        	this.adaptOffline();
+        	this.adaptOffline(path);
         }
     }
 
