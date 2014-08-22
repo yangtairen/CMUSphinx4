@@ -58,9 +58,6 @@ public class AbstractSpeechRecognizer {
 		profile.adapt(path);
 	}
 	
-	public void getFile() throws Exception {
-		profile.getAdaptationFile();
-	}
 	/**
 	 * Returns result of the recognition.
 	 */
@@ -78,11 +75,11 @@ public class AbstractSpeechRecognizer {
 		return null == result ? null : new SpeechResult(result);
 	}
 	
-	/**
-	 * Returns the Loader object used for loading the acoustic model.
-	 */
-	public Loader getLoader() {
-		return (Loader) context.getLoader();
-	}
+//	/**
+//	 * Returns the Loader object used for loading the acoustic model.
+//	 */
+//	public Loader getLoader() {
+//		return (Loader) context.getLoader();
+//	}
 	
 }
