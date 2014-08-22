@@ -46,21 +46,16 @@ public class AbstractSpeechRecognizer {
 
 	public void initAdaptation() throws Exception {
 		profile.initialization();
-		this.setAdaptationPath("/home/gia/Work/Task1/mllr_matrix");
 	}
 
-	protected void adaptCurrentModel() throws Exception {
+	protected void adaptCurrentModel(String path) throws Exception {
 		profile.reestimate();
+		profile.store(path);
 		
 	}
 
-	public void adaptOffline() throws IOException, URISyntaxException {
-		profile.adapt();
-	}
-	
-	public void setAdaptationPath(String filePath) {
-		profile.adaptationPath = filePath;
-		
+	public void adaptOffline(String path) throws IOException, URISyntaxException {
+		profile.adapt(path);
 	}
 	
 	public void getFile() throws Exception {
