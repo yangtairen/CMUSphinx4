@@ -1,6 +1,5 @@
 package edu.cmu.sphinx.api;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
@@ -20,9 +19,7 @@ public class SpeakerProfile {
 	protected boolean collectStatsForAdaptation;
 	private MllrEstimation estimation;
 	private CountsCollector cc;
-	public String adaptationPath;
-	private boolean isEstimated;
-	private boolean isStored;
+
 	
 	Sphinx3Loader loader;
 	
@@ -75,23 +72,13 @@ public class SpeakerProfile {
 		return transformer;
 	}
 	
-	public void store() throws Exception {
-
-		if(isEstimated) {
-			this.estimation.setOutputFilePath(adaptationPath);
-			this.estimation.createMllrFile();
-			isStored = true;
-		}
-		else {
-			System.out.println("Something wrong int estimation");
-		}
-				
+	public void store(String path) throws Exception {
+		this.estimation.setOutputFilePath(path);
+		this.estimation.createMllrFile();		
 	}
 	
 	public void reestimate() throws Exception{
-		
-		isEstimated = true;
-		
+	
 		this.estimation = new MllrEstimation("", 1, "", false, cc.getCounts(),
 				"", false, this.getLoader());
 //		MllrTransformer transformer = this.getTransformation();
@@ -100,7 +87,7 @@ public class SpeakerProfile {
 		
 		this.estimation.estimateMatrices();
 		
-		this.store();
+//		this.store();
 		
 	}
 	
@@ -112,14 +99,14 @@ public class SpeakerProfile {
 	}
 	
 	public void getAdaptationFile() throws Exception {
-		if(!isStored)
-			this.store();
-		System.out.println("The mllr matrix can be found at " + adaptationPath);
+//		if(!isStored)
+//			this.store();
+//		System.out.println("The mllr matrix can be found at " + adaptationPath);
 	}
 
-	public void adapt() throws IOException, URISyntaxException {
+	public void adapt(String path) throws IOException, URISyntaxException {
 		
-		test = new MllrDecoding(loader, adaptationPath);
+		test = new MllrDecoding(loader, path);
 		
 		test.decodeWithMllr();
 	}
