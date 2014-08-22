@@ -53,7 +53,7 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
         recognizer.allocate();
         context.setSpeechSource(stream);
         
-        String path = "/home/gia/Work/mllr_matrix";
+        String path = "/home/gia/Work/sphinx4/sphinx4-samples/src/main/resources/edu/cmu/sphinx/demo/transcriber/mllr_matrix";
         
         this.initAdaptation();
         
