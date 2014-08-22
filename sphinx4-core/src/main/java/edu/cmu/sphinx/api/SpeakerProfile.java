@@ -19,7 +19,6 @@ public class SpeakerProfile {
 	protected boolean collectStatsForAdaptation;
 	private MllrEstimation estimation;
 	private CountsCollector cc;
-
 	
 	Sphinx3Loader loader;
 	
@@ -87,8 +86,6 @@ public class SpeakerProfile {
 		
 		this.estimation.estimateMatrices();
 		
-//		this.store();
-		
 	}
 	
 	/**
@@ -96,12 +93,6 @@ public class SpeakerProfile {
 	 */
 	public Loader getLoader() {
 		return (Loader) context.getLoader();
-	}
-	
-	public void getAdaptationFile() throws Exception {
-//		if(!isStored)
-//			this.store();
-//		System.out.println("The mllr matrix can be found at " + adaptationPath);
 	}
 
 	public void adapt(String path) throws IOException, URISyntaxException {
