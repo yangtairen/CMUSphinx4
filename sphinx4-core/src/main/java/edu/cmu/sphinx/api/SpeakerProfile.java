@@ -8,7 +8,6 @@ import edu.cmu.sphinx.decoder.adaptation.DensityFileData;
 import edu.cmu.sphinx.decoder.adaptation.MllrDecoding;
 import edu.cmu.sphinx.decoder.adaptation.MllrEstimation;
 import edu.cmu.sphinx.decoder.adaptation.MllrTransformer;
-import edu.cmu.sphinx.linguist.acoustic.tiedstate.Loader;
 import edu.cmu.sphinx.linguist.acoustic.tiedstate.Sphinx3Loader;
 
 public class SpeakerProfile {
@@ -79,7 +78,7 @@ public class SpeakerProfile {
 	public void reestimate() throws Exception{
 	
 		this.estimation = new MllrEstimation("", 1, "", false, cc.getCounts(),
-				"", false, this.getLoader());
+				"", false, this.loader);
 //		MllrTransformer transformer = this.getTransformation();
 		// change the means when the buffer will be available 
 //		loader.changeMeanFile(transformer.getMeans());
@@ -88,13 +87,6 @@ public class SpeakerProfile {
 		
 	}
 	
-	/**
-	 * Returns the Loader object used for loading the acoustic model.
-	 */
-	public Loader getLoader() {
-		return (Loader) context.getLoader();
-	}
-
 	public void adapt(String path) throws IOException, URISyntaxException {
 		
 		test = new MllrDecoding(loader, path);
