@@ -12,9 +12,10 @@
 package edu.cmu.sphinx.api;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 
-import edu.cmu.sphinx.linguist.acoustic.tiedstate.Loader;
 import edu.cmu.sphinx.recognizer.Recognizer;
 import edu.cmu.sphinx.result.Result;
 
@@ -25,6 +26,8 @@ public class AbstractSpeechRecognizer {
 
 	protected final Context context;
 	protected final Recognizer recognizer;
+	
+	
 
 	protected final SpeechSourceProvider speechSourceProvider;
 	public final SpeakerProfile profile;
@@ -50,9 +53,19 @@ public class AbstractSpeechRecognizer {
 
 	protected void adaptCurrentModel(String path) throws Exception {
 		profile.reestimate();
+		profile.adapt(path);
 		profile.store(path);
 		
 	}
+	
+    protected void adaptOnline(String path, InputStream stream) throws Exception {
+    	//TODO: access frontend for buffering the sent results
+    	while (this.getResult() != null);
+    	
+    	this.adaptCurrentModel(path);
+    	this.profile.setCollectStatsForAdaptation(false);
+    	this.profile.setLocalInputStream(stream);
+    }
 
 	public void adaptOffline(String path) throws IOException, URISyntaxException {
 		profile.adapt(path);
