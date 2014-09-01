@@ -32,13 +32,6 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
     {
         super(configuration);
     }
-    
-    private void adaptOnline(String path) throws Exception {
-    	//TODO: access frontend for buffering the sent results
-    	while (this.getResult() != null);
-    	this.adaptCurrentModel(path);
-    	this.profile.setCollectStatsForAdaptation(false);
-    }
 
     /**
      * Starts recognition process.
@@ -58,7 +51,8 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
         this.initAdaptation();
         
         if(useOnlineAdaptation) {
-        	this.adaptOnline(path);
+        	this.adaptOnline(path, stream);
+        	context.setSpeechSource(profile.localStream);
         }
         else {
         	this.adaptOffline(path);
