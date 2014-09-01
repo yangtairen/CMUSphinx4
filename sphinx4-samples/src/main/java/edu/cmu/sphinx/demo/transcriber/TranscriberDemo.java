@@ -40,12 +40,12 @@ public class TranscriberDemo {
         configuration.setLanguageModelPath("resource:/edu/cmu/sphinx/models/language/en-us.lm.dmp");
         
         // If you want to use your own mllr_matrix
-        // configuration.setAdaptationFile("/home/gia/Work/Task1/mllr_matrix");
+//         configuration.setAdaptationFile("/home/gia/Work/mllr_matrix");
 
         StreamSpeechRecognizer recognizer = 
             new StreamSpeechRecognizer(configuration);
         InputStream stream = TranscriberDemo.class.getResourceAsStream(
-                "/edu/cmu/sphinx/demo/aligner/10001-90210-01803.wav");
+                "/edu/cmu/sphinx/demo/MllrDecodingConfig/JamesCameron_2010_310.25_329.97.wav");
         
         // If you want to use your own mllr_matrix
         // recognizer.startRecognition(stream)
@@ -78,20 +78,37 @@ public class TranscriberDemo {
         System.out.println("The results with the adapted model");
         
         // the buffer is not available yet
-        InputStream stream2 = TranscriberDemo.class.getResourceAsStream(
-                    "/edu/cmu/sphinx/demo/aligner/10001-90210-01803.wav");
+        stream = TranscriberDemo.class.getResourceAsStream(
+                    "/edu/cmu/sphinx/demo/MllrDecodingConfig/JamesCameron_2010_310.25_329.97.wav");
         
-        // Collect statistics for the adaptation
-        recognizer.startRecognition(stream2);
-        while (recognizer.getResult() != null);
+     
+        recognizer.startRecognition(stream, true);
+        System.out.println("REsult " + result);
+        while ((result = recognizer.getResult()) != null) {
+            
+            System.out.format("Hypothesis: %s\n",
+                              result.getHypothesis());
+                              
+            System.out.println("List of recognized words and their times:");
+            for (WordResult r : result.getWords()) {
+        	System.out.println(r);
+            }
+
+            System.out.println("Best 3 hypothesis:");            
+            for (String s : result.getNbest(3))
+                System.out.println(s);
+
+            System.out.println("Lattice contains " + result.getLattice().getNodes().size() + " nodes");
+        }
+
         recognizer.stopRecognition();
     	
 
-        InputStream stream3 = TranscriberDemo.class.getResourceAsStream(
-                "/edu/cmu/sphinx/demo/aligner/10001-90210-01803.wav");
+        stream = TranscriberDemo.class.getResourceAsStream(
+                "/edu/cmu/sphinx/demo/countsCollector/BillGates_2010_554.62_564.32.wav");
         
         // Adapt offline with the new acoustic model
-        recognizer.startRecognition(stream3, false);
+        recognizer.startRecognition(stream, false);
 
         while ((result = recognizer.getResult()) != null) {
         
