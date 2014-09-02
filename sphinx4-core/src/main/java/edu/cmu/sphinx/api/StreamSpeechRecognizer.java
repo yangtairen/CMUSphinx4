@@ -14,6 +14,8 @@ package edu.cmu.sphinx.api;
 import java.io.IOException;
 import java.io.InputStream;
 
+import edu.cmu.sphinx.util.TimeFrame;
+
 
 /**
  * Speech recognizer that works with audio resources.
@@ -31,6 +33,10 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
         throws IOException
     {
         super(configuration);
+    }
+
+    public void startRecognition(InputStream stream) {
+        startRecognition(stream, TimeFrame.INFINITE);
     }
 
     /**
@@ -57,6 +63,9 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
         else {
         	this.adaptOffline(path);
         }
+    public void startRecognition(InputStream stream, TimeFrame timeFrame) {
+        recognizer.allocate();
+        context.setSpeechSource(stream, timeFrame);
     }
 
     

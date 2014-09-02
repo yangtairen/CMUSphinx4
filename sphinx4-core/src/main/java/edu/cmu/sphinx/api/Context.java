@@ -22,6 +22,7 @@ import java.net.URL;
 import edu.cmu.sphinx.frontend.frequencywarp.MelFrequencyFilterBank2;
 import edu.cmu.sphinx.frontend.util.StreamDataSource;
 import edu.cmu.sphinx.linguist.acoustic.tiedstate.Loader;
+import edu.cmu.sphinx.util.TimeFrame;
 import edu.cmu.sphinx.util.props.Configurable;
 import edu.cmu.sphinx.util.props.ConfigurationManager;
 
@@ -143,7 +144,7 @@ public class Context {
     /**
      * Sets path to the language model.
      *
-     * Enables probabilistic language model and distables static grammar.
+     * Enables probabilistic language model and disables static grammar.
      * Currently it supports ".lm" and ".dmp" file formats.
      *
      * @param  path path to the language model file
@@ -165,6 +166,12 @@ public class Context {
                 "Unknown format extension: " + path);
         }
         setLocalProperty("decoder->searchManager", "wordPruningSearchManager");
+    }
+
+
+    public void setSpeechSource(InputStream stream, TimeFrame timeFrame) {
+        getInstance(StreamDataSource.class).setInputStream(stream, timeFrame);
+        setLocalProperty("threadedScorer->frontend", "liveFrontEnd");
     }
 
     /**
@@ -210,7 +217,7 @@ public class Context {
      *
      * @param  name  property name
      * @param  value property value
-     * @see          Context#setLocalProperty(String, Object) 
+     * @see          Context#setLocalProperty(String, Object)
      */
     public void setGlobalProperty(String name, Object value) {
         configurationManager.setGlobalProperty(name, value.toString());

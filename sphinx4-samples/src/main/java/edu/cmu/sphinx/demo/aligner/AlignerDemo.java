@@ -11,9 +11,16 @@
  */
 package edu.cmu.sphinx.demo.aligner;
 
-import java.net.URL;
+import static com.google.common.base.Charsets.UTF_8;
+import static com.google.common.collect.Lists.transform;
+import static com.google.common.io.Files.asCharSource;
+import static edu.cmu.sphinx.result.WordResults.toSpelling;
 
-import edu.cmu.sphinx.api.Configuration;
+import java.io.File;
+import java.net.URL;
+import java.util.List;
+
+import edu.cmu.sphinx.alignment.LongTextAligner;
 import edu.cmu.sphinx.api.SpeechAligner;
 import edu.cmu.sphinx.result.WordResult;
 
@@ -24,32 +31,71 @@ import edu.cmu.sphinx.result.WordResult;
  * <br/>
  * In order to initialize the aligner you need to specify several data files
  * which might be downloaded from the CMUSphinx website. There should be an
- * acoustic model for your lanaguage, a dictionary an optional G2P model to
- * convert word strings to pronunciation.
- * <br/>
+ * acoustic model for your language, a dictionary, an optional G2P model to
+ * convert word strings to pronunciation. <br/>
  * Currently the audio must have specific format (16khz, 16bit, mono), but in
- * the future other formats will be supported.
- * <br/>
+ * the future other formats will be supported. <br/>
  * Text should be a clean text in lower case. It should be cleaned from
  * punctuation marks, numbers and other non-speakable things. In the future
  * automatic cleanup will be supported.
  */
 public class AlignerDemo {
+    private static final String ACOUSTIC_MODEL_PATH =
+            "resource:/edu/cmu/sphinx/models/acoustic/wsj";
+    private static final String DICTIONARY_PATH =
+            "resource:/edu/cmu/sphinx/models/acoustic/wsj/dict/cmudict.0.6d";
+    private static final String TEXT = "one zero zero zero one nine oh two "
+            + "one oh zero one eight zero three";
 
-    private static final String MODEL_PATH =
-        "resource:/edu/cmu/sphinx/models/acoustic/wsj";
-    private static final String TEXT =
-        "one zero zero zero one nine oh two one oh zero one eight zero three";
+    public static void main(String args[]) throws Exception {
+        URL audioUrl;
+        String transcript;
+        if (args.length > 1) {
+            audioUrl = new File(args[0]).toURI().toURL();
+            transcript = asCharSource(new File(args[1]), UTF_8).read();
+        } else {
+            audioUrl = AlignerDemo.class.getResource("10001-90210-01803.wav");
+            transcript = TEXT;
+        }
+        String acousticModelPath =
+                (args.length > 2) ? args[2] : ACOUSTIC_MODEL_PATH;
+        String dictionaryPath = (args.length > 3) ? args[3] : DICTIONARY_PATH;
+        String g2pPath = (args.length > 4) ? args[4] : null;
+        SpeechAligner aligner =
+                new SpeechAligner(acousticModelPath, dictionaryPath, g2pPath);
 
-    public static void main(String Args[]) throws Exception {
-        Configuration config = new Configuration();
-        config.setAcousticModelPath(MODEL_PATH);
-        config.setDictionaryPath(MODEL_PATH + "/dict/cmudict.0.6d");
-        SpeechAligner aligner = new SpeechAligner(config);
-        
-        URL url = AlignerDemo.class.getResource("10001-90210-01803.wav");
+        List<WordResult> results = aligner.align(audioUrl, transcript);
+        LongTextAligner textAligner =
+                new LongTextAligner(transform(results, toSpelling()), 1);
+        List<String> words = aligner.getWordExpander().expand(transcript);
 
-        for (WordResult result : aligner.align(url, TEXT))
-            System.out.println(result);
+        int[] aid = textAligner.align(words);
+
+        int lastId = -1;
+        for (int i = 0; i < aid.length; ++i) {
+            if (aid[i] == -1) {
+                System.out.format("- %s\n", words.get(i));
+            } else {
+                if (aid[i] - lastId > 1) {
+                    for (WordResult result : results.subList(lastId + 1,
+                            aid[i])) {
+                        System.out.format("+ %-25s [%s]\n", result.getWord()
+                                .getSpelling(), result.getTimeFrame());
+                    }
+                }
+                System.out.format("  %-25s [%s]\n", results.get(aid[i])
+                        .getWord().getSpelling(), results.get(aid[i])
+                        .getTimeFrame());
+                lastId = aid[i];
+            }
+        }
+
+        if (lastId >= 0 && results.size() - lastId > 1) {
+            for (WordResult result : results.subList(lastId + 1,
+                    results.size())) {
+                System.out.format("+ %-25s [%s]\n", result.getWord()
+                        .getSpelling(), result.getTimeFrame());
+            }
+        }
     }
 }
