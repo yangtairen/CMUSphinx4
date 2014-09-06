@@ -1,34 +1,16 @@
 package edu.cmu.sphinx.demo.speakerid;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.TargetDataLine;
-
-import edu.cmu.sphinx.demo.transcriber.TranscriberDemo;
+import edu.cmu.sphinx.api.Configuration;
+import edu.cmu.sphinx.api.SpeechResult;
+import edu.cmu.sphinx.api.StreamSpeechRecognizer;
 import edu.cmu.sphinx.speakerid.Segment;
 import edu.cmu.sphinx.speakerid.SpeakerCluster;
 import edu.cmu.sphinx.speakerid.SpeakerIdentification;
-import edu.cmu.sphinx.frontend.*;
-import edu.cmu.sphinx.util.props.*;
-
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.UnsupportedAudioFileException;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import edu.cmu.sphinx.util.TimeFrame;
 
 
 public class SpeakerIdentificationDemo {
@@ -49,69 +31,46 @@ public class SpeakerIdentificationDemo {
      *            speakers intervals
      * @throws IOException
      */
-    public static void printSpeakerIntervals(ArrayList<SpeakerCluster> speakers, String fileName)
+    public static void printSpeakerIntervals(ArrayList<SpeakerCluster> speakers)
             throws IOException {
         int idx = 0;
         for (SpeakerCluster spk : speakers) {
-            idx++;
             ArrayList<Segment> segments = spk.getArrayOfSegments();
             for (Segment seg : segments)
-                System.out.println(time(seg.getStartTime()) + " "
-                        + time(seg.getLength()) + " Speaker" + idx);
-        }
-//        
-//        ArrayList<Segment> s = speakers.get(0).getSpeakerIntervals();
-//        ArrayList<Segment> s2 = speakers.get(0).getArrayOfSegments();
-        
-        
-//        System.out.println("speaker intervals");
-//        for(Segment seg : s)
-//        	System.out.println(time(seg.getStartTime()) + " " + time(seg.getLength()) + " Speaker 1");
-        
-//        System.out.println("array of segments");
-//        for(Segment seg : s2)
-//        	System.out.println(time(seg.getStartTime()) + " " + time(seg.getLength()) + " Speaker 1");
-        
+                System.out.println(seg.getStartTime() + " "
+                        + seg.getLength() + " Speaker" + (++idx));
+        }        
     }
 
-    public static void main(String[] args) throws IOException, UnsupportedAudioFileException, LineUnavailableException {
+    public static void main(String[] args) throws Exception {
+    	
+	  Configuration configuration = new Configuration();
+
+      configuration.setAcousticModelPath("resource:/edu/cmu/sphinx/models/acoustic/wsj");
+      configuration.setDictionaryPath("resource:/edu/cmu/sphinx/models/acoustic/wsj/dict/cmudict.0.6d");
+      configuration.setLanguageModelPath("resource:/edu/cmu/sphinx/models/language/en-us.lm.dmp");
+      
     	
         SpeakerIdentification sd = new SpeakerIdentification();
     
-        URL url = SpeakerIdentificationDemo.class.getResource("JamesCameron_2010_310.25_329.97.wav");
+        URL url = SpeakerIdentificationDemo.class.getResource("out.wav");
+        ArrayList<SpeakerCluster> clusters = sd.cluster(url.openStream());
         
-       
-//       TargetDataLine line = null;
-//       InputStream target1 = url.openStream();
-//       AudioInputStream target2 = new AudioInputStream(line);
-//       InputStream target3 = target2;
-       
-        // the AudioInputStream needs a TargetDataLine
-//        AudioInputStream a = new AudioInputStream((TargetDataLine) url.openStream());
+//        printSpeakerIntervals(clusters);
         
-        // get the clusters from an InputStream
-       
-       
-//       URL url2 = ClassLoader.getResource("/sounds/file.wav");
-       AudioInputStream ais = AudioSystem.getAudioInputStream(url);
-       Clip clip = AudioSystem.getClip();
-       
-       
-       System.out.println("cool");
-       
-//        ArrayList<SpeakerCluster> clusters = sd.cluster(target1);
-        
-//        printSpeakerIntervals(clusters, url.getPath());
-    
-//        clusters.get(0).
-        
-        
-        
-        
-        
-        
-        
-        
-        
+      StreamSpeechRecognizer recognizer = 
+      new StreamSpeechRecognizer(configuration);
+
+      recognizer.startRecognition(url, true);
+      
+      SpeechResult result;
+
+  	
+//      while ((result = recognizer.getResult()) != null) {
+//          System.out.format("Hypothesis: %s\n", result.getHypothesis());
+//      }
+      
+      recognizer.stopRecognition();
+
     }
 }
