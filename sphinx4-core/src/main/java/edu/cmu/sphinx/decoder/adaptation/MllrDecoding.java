@@ -33,7 +33,7 @@ public class MllrDecoding {
 		
 	}
 	
-	public void decodeWithMllr() throws IOException, URISyntaxException {
+	public MllrTransformer getTransformer() throws IOException {
 		readMllrMatrix(this.mllrFilePath);
 		oldFileMeans = new DensityFileData();
 		oldFileMeans.setNumGaussiansPerState(loader.getNumGaussiansPerState());
@@ -45,10 +45,9 @@ public class MllrDecoding {
 		
 		this.mllrmat = new MllrTransformer(oldFileMeans, A, B, "nothing");
 		mllrmat.transform();
-		loader.changeMeanFile(mllrmat.getMeans());
 		
+		return mllrmat;
 	}
-	
 
 	/**
 	 * Read the adaptation file 
