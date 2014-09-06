@@ -17,6 +17,8 @@ import java.net.URL;
 import java.util.ArrayList;
 
 import edu.cmu.sphinx.linguist.acoustic.tiedstate.Sphinx3Loader;
+import edu.cmu.sphinx.recognizer.Recognizer;
+import edu.cmu.sphinx.result.Result;
 import edu.cmu.sphinx.speakerid.Segment;
 import edu.cmu.sphinx.speakerid.SpeakerCluster;
 import edu.cmu.sphinx.speakerid.SpeakerIdentification;
@@ -54,37 +56,18 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
      * @throws Exception 
      * @see         StreamSpeechRecognizer#stopRecognition()
      */
-//    public void startRecognition(InputStream stream, boolean useOnlineAdaptation, boolean ok) throws Exception {
-//        recognizer.allocate();
-//        
-//        
-//        context.setSpeechSource(stream);
-//        
-//        
-//        this.initAdaptation();
-//        
-//        if(useOnlineAdaptation) {
-//        	this.adaptOnline(ok);
-//        }
-//        else {
-//        	this.adaptOffline();
-//        }
-//    }
-    public void startRecognition(URL url, boolean useOnlineAdaptation) throws Exception {
 
-    	  collectStatsFromChuncks(url);
+    public void startRecognition(URL url, boolean useOnlineAdaptation) throws Exception {
+//    	recognizer.allocate();
     	
-//        recognizer.allocate();
-//        context.setSpeechSource(stream);
-//        
-//        this.initAdaptation();
-//        
-//        if(useOnlineAdaptation) {
-//        	this.adaptOnline(false);
-//        }
-//        else {
-//        	this.adaptOffline();
-//        }
+    	if(useOnlineAdaptation) {
+//    		collectStatsFromChuncks(url);
+    		this.getResult2(url);
+//    		this.adaptOffline();
+    	}
+ 
+    	
+    	
     }
     
     
@@ -94,22 +77,54 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
     }
 
     
-//    public void startRecognition(InputStream stream) throws Exception {
-//        recognizer.allocate();
-//        context.setSpeechSource(stream);
-//    }
-    
-    
-    // collect stats for each chunck 
-    public void collectStatsFromChuncks(URL url) throws Exception {
-    	recognizer.allocate();
-    
+	public void getResult2(URL url) throws Exception {
 		SpeakerIdentification sd = new SpeakerIdentification();
 		ArrayList<SpeakerCluster> speakers = sd.cluster(url.openStream());
-		
-		
-		int size = speakers.size();
-		p = new SpeakerProfile[size];
+
+		ArrayList<Segment> segment = new ArrayList<Segment>();
+
+    	TimeFrame t;
+    	int idx = 0;
+    	
+    	for (SpeakerCluster spk : speakers) {
+    		System.out.println("Speaker " + (idx + 1) + " :");
+    		segment = spk.getArrayOfSegments();
+    		recognizer.allocate();
+    		for(Segment s : segment) {
+    			
+    		   	long startTime = s.getStartTime();
+            	long endTime   = s.getStartTime() + s.getLength();
+            	t = new TimeFrame(startTime, endTime);
+
+            	 context.setSpeechSource(url.openStream(), t);
+            	 
+            	 this.initAdaptation(context);
+            	 
+            	 this.adaptOffline(idx);
+            	 
+            	 Result result;
+            	 
+            	   while ((result = recognizer.recognize()) != null) {
+            	        
+            		   SpeechResult r = new SpeechResult(result);
+                       System.out.format("Hypothesis: %s\n",
+                                         r.getHypothesis());
+                   }
+         
+            	   System.out.println("safe");
+    		}
+    		idx++;
+    		recognizer.deallocate();
+    	}
+    	recognizer.allocate();
+
+	}
+	
+    // colecteaza statisticile de a fiecare chunck
+    public void collectStatsFromChuncks(URL url) throws Exception {
+    	
+		SpeakerIdentification sd = new SpeakerIdentification();
+		ArrayList<SpeakerCluster> speakers = sd.cluster(url.openStream());
 
 		ArrayList<Segment> segment = new ArrayList<Segment>();
 
@@ -117,6 +132,8 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
     	int ok;
     	
     	int idx = 0;
+ 
+    	System.out.println("how many speakers? " + speakers.size());
     	for (SpeakerCluster spk : speakers) {
     		segment = spk.getArrayOfSegments();
 
@@ -128,11 +145,9 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
             	long endTime   = s.getStartTime() + s.getLength();
             	t = new TimeFrame(startTime, endTime);
             	
-                 
             	 context.setSpeechSource(url.openStream(), t);
-                 p[idx] = new SpeakerProfile(context);
                  
-                 this.initAdaptation(idx);
+                 this.initAdaptation(context);
                  
             	// collect stats
             	if(ok == 1) {
@@ -145,6 +160,8 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
     		}
     		idx++;
     	}
+    	
+
     }
     
 	/**
@@ -160,7 +177,7 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
 
 
 	public Sphinx3Loader getLoader() {
-		// TODO Auto-generated method stub
+	
 		return (Sphinx3Loader)context.getLoader();
 	}
 }
