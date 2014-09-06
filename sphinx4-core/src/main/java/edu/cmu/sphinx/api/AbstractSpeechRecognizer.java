@@ -12,9 +12,7 @@
 package edu.cmu.sphinx.api;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 
 import edu.cmu.sphinx.recognizer.Recognizer;
 import edu.cmu.sphinx.result.Result;
@@ -30,7 +28,7 @@ public class AbstractSpeechRecognizer {
 	
 
 	protected final SpeechSourceProvider speechSourceProvider;
-	public final SpeakerProfile profile;
+	public SpeakerProfile profile;
 
 	/**
 	 * Constructs recognizer object using provided configuration.
@@ -41,40 +39,50 @@ public class AbstractSpeechRecognizer {
 	}
 
 	protected AbstractSpeechRecognizer(Context context) throws IOException {
+		
 		this.context = context;
+		
 		recognizer = context.getInstance(Recognizer.class);
 		speechSourceProvider = new SpeechSourceProvider();
-		profile = new SpeakerProfile(this.context);
-	}
-
-	public void initAdaptation() throws Exception {
-		profile.initialization();
-	}
-
-	protected void adaptCurrentModel(String path) throws Exception {
-		profile.reestimate();
-		profile.adapt(path);
-		profile.store(path);
 		
 	}
 	
-    protected void adaptOnline(String path, InputStream stream) throws Exception {
-    	//TODO: access frontend for buffering the sent results
-    	while (this.getResult() != null);
-    	
-    	this.adaptCurrentModel(path);
-    	this.profile.setCollectStatsForAdaptation(false);
-    	this.profile.setLocalInputStream(stream);
-    }
-
-	public void adaptOffline(String path) throws IOException, URISyntaxException {
-		profile.adapt(path);
+	public void initAdaptation(Context c) throws Exception {
+		profile = new SpeakerProfile(c);
+		profile.initialization();
 	}
+
+
+
+	
+    protected void adaptOnline(boolean ok, int ID) throws Exception {
+ 
+    	SpeechResult result;
+    	
+    	while ((result = this.getResult()) != null) {
+    		profile.cc.collect(result.getResult());
+    	}
+    	
+    
+        if(!ok) {
+        	this.profile.adaptCurrentModel(ID);
+        	this.profile.setCollectStatsForAdaptation(false);
+        	
+        }
+    	
+    }
+    
+
+	public void adaptOffline(int ID) throws IOException, URISyntaxException {
+		profile.adapt(ID);
+	}
+	
+
 	
 	/**
 	 * Returns result of the recognition.
 	 */
-	public SpeechResult getResult() {
+	public SpeechResult getResult2() {
 		Result result = recognizer.recognize();
 
 		if (profile.getCollectStatsForAdaptation() && result != null) {
@@ -88,11 +96,10 @@ public class AbstractSpeechRecognizer {
 		return null == result ? null : new SpeechResult(result);
 	}
 	
-//	/**
-//	 * Returns the Loader object used for loading the acoustic model.
-//	 */
-//	public Loader getLoader() {
-//		return (Loader) context.getLoader();
-//	}
+	public SpeechResult getResult() {
+		
+		Result result = recognizer.recognize();
+		return null == result ? null : new SpeechResult(result);
+	}
 	
 }
