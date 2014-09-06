@@ -61,7 +61,7 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
 //    	recognizer.allocate();
     	
     	if(useOnlineAdaptation) {
-//    		collectStatsFromChuncks(url);
+    		collectStatsFromChuncks(url);
     		this.getResult2(url);
 //    		this.adaptOffline();
     	}
