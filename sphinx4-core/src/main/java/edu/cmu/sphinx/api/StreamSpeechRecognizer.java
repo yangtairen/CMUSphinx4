@@ -100,7 +100,7 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
             	 
             	 this.initAdaptation(context);
             	 
-            	 this.adaptOffline(idx);
+//            	 this.adaptOffline(idx);
             	 
             	 Result result;
             	 

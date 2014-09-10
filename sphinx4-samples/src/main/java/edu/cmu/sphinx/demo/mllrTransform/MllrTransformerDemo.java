@@ -19,7 +19,7 @@ public class MllrTransformerDemo {
 
 		Configuration configuration = new Configuration();
 
-		configuration.setAcousticModelPath("/home/bogdanpetcu/RSoC/en-us");
+		configuration.setAcousticModelPath("/home/gia/Work/Resources/Resources/en-us");
 		configuration
 				.setDictionaryPath("resource:/edu/cmu/sphinx/models/acoustic/wsj/dict/cmudict.0.6d");
 		configuration
@@ -28,15 +28,15 @@ public class MllrTransformerDemo {
 		StreamSpeechRecognizer recognizer = new StreamSpeechRecognizer(
 				configuration);
 		InputStream stream = TranscriberDemo.class
-				.getResourceAsStream("/edu/cmu/sphinx/demo/countsCollector/out.wav");
+				.getResourceAsStream("/edu/cmu/sphinx/demo/countsCollector/1min.wav");
 		recognizer.startRecognition(stream, false);
 
 		SpeechResult result;
 		MllrTransformer mt;
 		Sphinx3Loader loader = (Sphinx3Loader) recognizer.getLoader();
-		DensityFileData means = new DensityFileData("", -Float.MAX_VALUE,
-				loader, false);
-		means.getMeansFromLoader();
+//		DensityFileData means = new DensityFileData("", -Float.MAX_VALUE,
+//				loader, false);
+//		means.getMeansFromLoader();
 
 		CountsCollector cc = new CountsCollector(loader.getVectorLength(),
 				loader.getNumStates(), loader.getNumStreams(),
@@ -47,30 +47,30 @@ public class MllrTransformerDemo {
 
 			System.out.format("Hypothesis: %s\n", result.getHypothesis());
 
-			System.out.println("List of recognized words and their times:");
-			for (WordResult r : result.getWords()) {
-				System.out.println(r);
-			}
-
-			System.out.println("Best 3 hypothesis:");
-			for (String s : result.getNbest(3))
-				System.out.println(s);
-
-			System.out.println("Lattice contains "
-					+ result.getLattice().getNodes().size() + " nodes");
+//			System.out.println("List of recognized words and their times:");
+//			for (WordResult r : result.getWords()) {
+//				System.out.println(r);
+//			}
+//
+//			System.out.println("Best 3 hypothesis:");
+//			for (String s : result.getNbest(3))
+//				System.out.println(s);
+//
+//			System.out.println("Lattice contains "
+//					+ result.getLattice().getNodes().size() + " nodes");
 		}
 
 		MllrEstimation me = new MllrEstimation("", 1,
-				"/home/bogdanpetcu/mllr_mat2", false, cc.getCounts(), "",
+				"/home/gia/Work/mllr_mat2", false, cc.getCounts(), "",
 				false, loader);
 
 		recognizer.stopRecognition();
 		me.estimateMatrices();
 		me.createMllrFile();
-		mt = new MllrTransformer(means, me.getA(), me.getB(),
-				"/home/bogdanpetcu/means");
-		mt.transform();
-		mt.writeToFile();
+//		mt = new MllrTransformer(means, me.getA(), me.getB(),
+//				"/home/bogdanpetcu/means");
+//		mt.transform();
+//		mt.writeToFile();
 
 	}
 }

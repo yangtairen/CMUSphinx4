@@ -1,0 +1,778 @@
+diff --git a/sphinx4-core/src/main/java/edu/cmu/sphinx/api/AbstractSpeechRecognizer.java b/sphinx4-core/src/main/java/edu/cmu/sphinx/api/AbstractSpeechRecognizer.java
+index ab1330d..33025f1 100644
+--- a/sphinx4-core/src/main/java/edu/cmu/sphinx/api/AbstractSpeechRecognizer.java
++++ b/sphinx4-core/src/main/java/edu/cmu/sphinx/api/AbstractSpeechRecognizer.java
+@@ -18,6 +18,7 @@ import java.util.ArrayList;
+ 
+ import edu.cmu.sphinx.recognizer.Recognizer;
+ import edu.cmu.sphinx.result.Result;
++import edu.cmu.sphinx.util.TimeFrame;
+ 
+ /**
+  * Base class for high-level speech recognizers.
+@@ -30,7 +31,8 @@ public class AbstractSpeechRecognizer {
+ 	
+ 
+ 	protected final SpeechSourceProvider speechSourceProvider;
+-	public final SpeakerProfile profile;
++//	public final SpeakerProfile profile;
++	public SpeakerProfile[] p;
+ 
+ 	/**
+ 	 * Constructs recognizer object using provided configuration.
+@@ -41,45 +43,68 @@ public class AbstractSpeechRecognizer {
+ 	}
+ 
+ 	protected AbstractSpeechRecognizer(Context context) throws IOException {
++		
+ 		this.context = context;
++		System.out.println("ajung aici? " + context);
++		
+ 		recognizer = context.getInstance(Recognizer.class);
+ 		speechSourceProvider = new SpeechSourceProvider();
+-		profile = new SpeakerProfile(this.context);
++//		profile = new SpeakerProfile(this.context);
+ 	}
+ 
++	// se initializeaza obiectele
++	public void initAdaptation(int ID) throws Exception {
++		
++		p[ID].initialization();
++		
++//		profile.initialization();
++	}
++	
+ 	public void initAdaptation() throws Exception {
+-		profile.initialization();
++		p[0].initialization();
++//		profile.initialization();
+ 	}
+ 
+-	protected void adaptCurrentModel(String path) throws Exception {
+-		profile.reestimate();
+-		profile.adapt(path);
+-		profile.store(path);
+-		
+-	}
++
++
+ 	
+-    protected void adaptOnline(String path, InputStream stream) throws Exception {
++    protected void adaptOnline(boolean ok, int ID) throws Exception {
+     	//TODO: access frontend for buffering the sent results
+-    	while (this.getResult() != null);
++    	SpeechResult result;
++    	
++    	while ((result = this.getResult(ID)) != null) {
++    		p[ID].cc.collect(result.getResult());
++//			profile.cc.collect(result.getResult());
++    	}
++    	
++    
++        if(!ok) {
++        	System.out.println("great");
++        	this.p[ID].adaptCurrentModel(ID);
++        	System.out.println("huhu?");
++        	this.p[ID].setCollectStatsForAdaptation(false);
++        	System.out.println("craaaap");
++//        	this.profile.setCollectStatsForAdaptation(false);
++        	
++        }
+     	
+-    	this.adaptCurrentModel(path);
+-    	this.profile.setCollectStatsForAdaptation(false);
+-    	this.profile.setLocalInputStream(stream);
+     }
++    
+ 
+-	public void adaptOffline(String path) throws IOException, URISyntaxException {
+-		profile.adapt(path);
++	public void adaptOffline(int ID) throws IOException, URISyntaxException {
++		p[ID].adapt();
++//		profile.adapt();
+ 	}
+ 	
+ 	/**
+ 	 * Returns result of the recognition.
+ 	 */
+-	public SpeechResult getResult() {
++	public SpeechResult getResult(int ID) {
+ 		Result result = recognizer.recognize();
+ 
+-		if (profile.getCollectStatsForAdaptation() && result != null) {
++		if (p[ID].getCollectStatsForAdaptation() && result != null) {
+ 			try {
+-				profile.getCountsCollector().collect(result);
++				p[ID].getCountsCollector().collect(result);
+ 			} catch (Exception e) {
+ 				e.printStackTrace();
+ 			}
+diff --git a/sphinx4-core/src/main/java/edu/cmu/sphinx/api/SpeakerProfile.java b/sphinx4-core/src/main/java/edu/cmu/sphinx/api/SpeakerProfile.java
+index 1d37cc9..9ab6f9e 100644
+--- a/sphinx4-core/src/main/java/edu/cmu/sphinx/api/SpeakerProfile.java
++++ b/sphinx4-core/src/main/java/edu/cmu/sphinx/api/SpeakerProfile.java
+@@ -2,6 +2,7 @@ package edu.cmu.sphinx.api;
+ 
+ import java.io.IOException;
+ import java.net.URISyntaxException;
++import java.util.ArrayList;
+ 
+ import edu.cmu.sphinx.decoder.adaptation.CountsCollector;
+ import edu.cmu.sphinx.decoder.adaptation.DensityFileData;
+@@ -9,6 +10,7 @@ import edu.cmu.sphinx.decoder.adaptation.MllrDecoding;
+ import edu.cmu.sphinx.decoder.adaptation.MllrEstimation;
+ import edu.cmu.sphinx.decoder.adaptation.MllrTransformer;
+ import edu.cmu.sphinx.linguist.acoustic.tiedstate.Sphinx3Loader;
++import edu.cmu.sphinx.speakerid.Segment;
+ 
+ public class SpeakerProfile {
+ 
+@@ -17,17 +19,36 @@ public class SpeakerProfile {
+ 	private Context context;
+ 	protected boolean collectStatsForAdaptation;
+ 	private MllrEstimation estimation;
+-	private CountsCollector cc;
++	public CountsCollector cc;
++	public DensityFileData means;
+ 	
+ 	Sphinx3Loader loader;
++	String path;
++	
++	ArrayList<Segment> segments;
++	
++	public void intSegments() {
++		segments = new ArrayList<Segment>();
++	}
+ 	
+ 	SpeakerProfile() {
+ 		
+ 	}
+ 	
++	protected void adaptCurrentModel(int ID) throws Exception {
++		this.reestimate();
++		this.store(ID);
++		
++//		profile.reestimate();
++//		profile.adapt(path);
++//		profile.store();
++		
++	}
++	
+ 	public SpeakerProfile(Context context) {
+ 		this.context = context;
+ 	}
++
+ 	
+ 	public void setCollectStatsForAdaptation(boolean status) {
+ 		collectStatsForAdaptation = status;
+@@ -41,17 +62,15 @@ public class SpeakerProfile {
+ 		return cc;
+ 	}
+ 	
+-	public void initialization() {
++	public void initialization() throws IOException, URISyntaxException {
+ 		this.collectStatsForAdaptation = true;
+ 		loader = (Sphinx3Loader) context.getLoader();
++		// e doar un constructor!
+ 		this.cc = new CountsCollector(loader.getVectorLength(),
+ 				loader.getNumStates(), loader.getNumStreams(),
+ 				loader.getNumGaussiansPerState());
+ 	}
+ 	
+-//	public void load() throws FileNotFoundException {
+-//		test.readMllrMatrix(adaptationPath);
+-//	}
+ 	
+ 	public MllrTransformer getTransformation() throws Exception {
+ 		DensityFileData means = new DensityFileData("", -Float.MAX_VALUE,
+@@ -70,14 +89,18 @@ public class SpeakerProfile {
+ 		return transformer;
+ 	}
+ 	
+-	public void store(String path) throws Exception {
++	public void store(int ID) throws Exception {
++		
++		path = "/home/gia/Work/mllr_matrix" + ID;
++		
+ 		this.estimation.setOutputFilePath(path);
+ 		this.estimation.createMllrFile();		
+ 	}
+ 	
+ 	public void reestimate() throws Exception{
+ 	
+-		this.estimation = new MllrEstimation("", 1, "", false, cc.getCounts(),
++		System.out.println("waaaaa");
++		this.estimation = new MllrEstimation("", 1, "", false, this.cc.getCounts(),
+ 				"", false, this.loader);
+ //		MllrTransformer transformer = this.getTransformation();
+ 		// change the means when the buffer will be available 
+@@ -87,7 +110,7 @@ public class SpeakerProfile {
+ 		
+ 	}
+ 	
+-	public void adapt(String path) throws IOException, URISyntaxException {
++	public void adapt() throws IOException, URISyntaxException {
+ 		
+ 		test = new MllrDecoding(loader, path);
+ 		
+diff --git a/sphinx4-core/src/main/java/edu/cmu/sphinx/api/StreamSpeechRecognizer.java b/sphinx4-core/src/main/java/edu/cmu/sphinx/api/StreamSpeechRecognizer.java
+index ffdc17c..b086295 100644
+--- a/sphinx4-core/src/main/java/edu/cmu/sphinx/api/StreamSpeechRecognizer.java
++++ b/sphinx4-core/src/main/java/edu/cmu/sphinx/api/StreamSpeechRecognizer.java
+@@ -13,7 +13,13 @@ package edu.cmu.sphinx.api;
+ 
+ import java.io.IOException;
+ import java.io.InputStream;
++import java.net.URL;
++import java.util.ArrayList;
+ 
++import edu.cmu.sphinx.linguist.acoustic.tiedstate.Sphinx3Loader;
++import edu.cmu.sphinx.speakerid.Segment;
++import edu.cmu.sphinx.speakerid.SpeakerCluster;
++import edu.cmu.sphinx.speakerid.SpeakerIdentification;
+ import edu.cmu.sphinx.util.TimeFrame;
+ 
+ 
+@@ -48,30 +54,97 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
+      * @throws Exception 
+      * @see         StreamSpeechRecognizer#stopRecognition()
+      */
+-    public void startRecognition(InputStream stream, boolean useOnlineAdaptation) throws Exception {
+-        recognizer.allocate();
+-        context.setSpeechSource(stream);
+-        
+-        String path = "/home/gia/Work/sphinx4/sphinx4-samples/src/main/resources/edu/cmu/sphinx/demo/transcriber/mllr_matrix";
+-        
+-        this.initAdaptation();
+-        
+-        if(useOnlineAdaptation) {
+-        	this.adaptOnline(path, stream);
+-        	context.setSpeechSource(profile.localStream);
+-        }
+-        else {
+-        	this.adaptOffline(path);
+-        }
++//    public void startRecognition(InputStream stream, boolean useOnlineAdaptation, boolean ok) throws Exception {
++//        recognizer.allocate();
++//        
++//        
++//        context.setSpeechSource(stream);
++//        
++//        
++//        this.initAdaptation();
++//        
++//        if(useOnlineAdaptation) {
++//        	this.adaptOnline(ok);
++//        }
++//        else {
++//        	this.adaptOffline();
++//        }
++//    }
++    public void startRecognition(URL url, boolean useOnlineAdaptation) throws Exception {
++
++    	  collectStatsFromChuncks(url);
++    	
++//        recognizer.allocate();
++//        context.setSpeechSource(stream);
++//        
++//        this.initAdaptation();
++//        
++//        if(useOnlineAdaptation) {
++//        	this.adaptOnline(false);
++//        }
++//        else {
++//        	this.adaptOffline();
++//        }
++    }
++    
++    
+     public void startRecognition(InputStream stream, TimeFrame timeFrame) {
+         recognizer.allocate();
+         context.setSpeechSource(stream, timeFrame);
+     }
+ 
+     
+-    public void startRecognition(InputStream stream) throws Exception {
+-        recognizer.allocate();
+-        context.setSpeechSource(stream);
++//    public void startRecognition(InputStream stream) throws Exception {
++//        recognizer.allocate();
++//        context.setSpeechSource(stream);
++//    }
++    
++    
++    // collect stats for each chunck 
++    public void collectStatsFromChuncks(URL url) throws Exception {
++    	recognizer.allocate();
++    
++		SpeakerIdentification sd = new SpeakerIdentification();
++		ArrayList<SpeakerCluster> speakers = sd.cluster(url.openStream());
++		
++		
++		int size = speakers.size();
++		p = new SpeakerProfile[size];
++
++		ArrayList<Segment> segment = new ArrayList<Segment>();
++
++    	TimeFrame t;
++    	int ok;
++    	
++    	int idx = 0;
++    	for (SpeakerCluster spk : speakers) {
++    		segment = spk.getArrayOfSegments();
++
++    		ok = segment.size();
++    		
++    		for(Segment s : segment) {
++    			
++    		   	long startTime = s.getStartTime();
++            	long endTime   = s.getStartTime() + s.getLength();
++            	t = new TimeFrame(startTime, endTime);
++            	
++                 
++            	 context.setSpeechSource(url.openStream(), t);
++                 p[idx] = new SpeakerProfile(context);
++                 
++                 this.initAdaptation(idx);
++                 
++            	// collect stats
++            	if(ok == 1) {
++            		this.adaptOnline(false, idx);
++            	}
++            	else
++            		this.adaptOnline(true, idx);
++                ok--;
++             
++    		}
++    		idx++;
++    	}
+     }
+     
+ 	/**
+@@ -84,4 +157,10 @@ public class StreamSpeechRecognizer extends AbstractSpeechRecognizer {
+     public void stopRecognition() {
+         recognizer.deallocate();
+     }
++
++
++	public Sphinx3Loader getLoader() {
++		// TODO Auto-generated method stub
++		return (Sphinx3Loader)context.getLoader();
++	}
+ }
+diff --git a/sphinx4-core/src/main/java/edu/cmu/sphinx/util/LogMath.java b/sphinx4-core/src/main/java/edu/cmu/sphinx/util/LogMath.java
+index 2948a30..8c55899 100644
+--- a/sphinx4-core/src/main/java/edu/cmu/sphinx/util/LogMath.java
++++ b/sphinx4-core/src/main/java/edu/cmu/sphinx/util/LogMath.java
+@@ -423,4 +423,8 @@ public final class LogMath {
+             out[i] = (float)logToLinear(vector[i]);
+         }
+     }
++
++	public static LogMath getInstance() {
++		return instance;
++	}
+ }
+diff --git a/sphinx4-samples/src/main/java/edu/cmu/sphinx/demo/mllrTransform/MllrTransformerDemo.java b/sphinx4-samples/src/main/java/edu/cmu/sphinx/demo/mllrTransform/MllrTransformerDemo.java
+index 37ce155..0033ed9 100644
+--- a/sphinx4-samples/src/main/java/edu/cmu/sphinx/demo/mllrTransform/MllrTransformerDemo.java
++++ b/sphinx4-samples/src/main/java/edu/cmu/sphinx/demo/mllrTransform/MllrTransformerDemo.java
+@@ -19,7 +19,7 @@ public class MllrTransformerDemo {
+ 
+ 		Configuration configuration = new Configuration();
+ 
+-		configuration.setAcousticModelPath("/home/bogdanpetcu/RSoC/en-us");
++		configuration.setAcousticModelPath("/home/gia/Work/Resources/Resources/en-us");
+ 		configuration
+ 				.setDictionaryPath("resource:/edu/cmu/sphinx/models/acoustic/wsj/dict/cmudict.0.6d");
+ 		configuration
+@@ -28,15 +28,15 @@ public class MllrTransformerDemo {
+ 		StreamSpeechRecognizer recognizer = new StreamSpeechRecognizer(
+ 				configuration);
+ 		InputStream stream = TranscriberDemo.class
+-				.getResourceAsStream("/edu/cmu/sphinx/demo/countsCollector/out.wav");
++				.getResourceAsStream("/edu/cmu/sphinx/demo/countsCollector/1min.wav");
+ 		recognizer.startRecognition(stream, false);
+ 
+ 		SpeechResult result;
+ 		MllrTransformer mt;
+ 		Sphinx3Loader loader = (Sphinx3Loader) recognizer.getLoader();
+-		DensityFileData means = new DensityFileData("", -Float.MAX_VALUE,
+-				loader, false);
+-		means.getMeansFromLoader();
++//		DensityFileData means = new DensityFileData("", -Float.MAX_VALUE,
++//				loader, false);
++//		means.getMeansFromLoader();
+ 
+ 		CountsCollector cc = new CountsCollector(loader.getVectorLength(),
+ 				loader.getNumStates(), loader.getNumStreams(),
+@@ -47,30 +47,30 @@ public class MllrTransformerDemo {
+ 
+ 			System.out.format("Hypothesis: %s\n", result.getHypothesis());
+ 
+-			System.out.println("List of recognized words and their times:");
+-			for (WordResult r : result.getWords()) {
+-				System.out.println(r);
+-			}
+-
+-			System.out.println("Best 3 hypothesis:");
+-			for (String s : result.getNbest(3))
+-				System.out.println(s);
+-
+-			System.out.println("Lattice contains "
+-					+ result.getLattice().getNodes().size() + " nodes");
++//			System.out.println("List of recognized words and their times:");
++//			for (WordResult r : result.getWords()) {
++//				System.out.println(r);
++//			}
++//
++//			System.out.println("Best 3 hypothesis:");
++//			for (String s : result.getNbest(3))
++//				System.out.println(s);
++//
++//			System.out.println("Lattice contains "
++//					+ result.getLattice().getNodes().size() + " nodes");
+ 		}
+ 
+ 		MllrEstimation me = new MllrEstimation("", 1,
+-				"/home/bogdanpetcu/mllr_mat2", false, cc.getCounts(), "",
++				"/home/gia/Work/mllr_mat2", false, cc.getCounts(), "",
+ 				false, loader);
+ 
+ 		recognizer.stopRecognition();
+ 		me.estimateMatrices();
+ 		me.createMllrFile();
+-		mt = new MllrTransformer(means, me.getA(), me.getB(),
+-				"/home/bogdanpetcu/means");
+-		mt.transform();
+-		mt.writeToFile();
++//		mt = new MllrTransformer(means, me.getA(), me.getB(),
++//				"/home/bogdanpetcu/means");
++//		mt.transform();
++//		mt.writeToFile();
+ 
+ 	}
+ }
+diff --git a/sphinx4-samples/src/main/java/edu/cmu/sphinx/demo/speakerid/SpeakerIdentificationDemo.java b/sphinx4-samples/src/main/java/edu/cmu/sphinx/demo/speakerid/SpeakerIdentificationDemo.java
+index 0b1a1af..a0080c9 100644
+--- a/sphinx4-samples/src/main/java/edu/cmu/sphinx/demo/speakerid/SpeakerIdentificationDemo.java
++++ b/sphinx4-samples/src/main/java/edu/cmu/sphinx/demo/speakerid/SpeakerIdentificationDemo.java
+@@ -8,11 +8,16 @@ import java.util.ArrayList;
+ import javax.sound.sampled.AudioInputStream;
+ import javax.sound.sampled.TargetDataLine;
+ 
++import edu.cmu.sphinx.api.Configuration;
++import edu.cmu.sphinx.api.SpeechResult;
++import edu.cmu.sphinx.api.StreamSpeechRecognizer;
+ import edu.cmu.sphinx.demo.transcriber.TranscriberDemo;
++import edu.cmu.sphinx.result.WordResult;
+ import edu.cmu.sphinx.speakerid.Segment;
+ import edu.cmu.sphinx.speakerid.SpeakerCluster;
+ import edu.cmu.sphinx.speakerid.SpeakerIdentification;
+ import edu.cmu.sphinx.frontend.*;
++import edu.cmu.sphinx.util.TimeFrame;
+ import edu.cmu.sphinx.util.props.*;
+ 
+ import javax.sound.sampled.AudioFormat;
+@@ -49,69 +54,94 @@ public class SpeakerIdentificationDemo {
+      *            speakers intervals
+      * @throws IOException
+      */
+-    public static void printSpeakerIntervals(ArrayList<SpeakerCluster> speakers, String fileName)
++    public static void printSpeakerIntervals(ArrayList<SpeakerCluster> speakers)
+             throws IOException {
+         int idx = 0;
+         for (SpeakerCluster spk : speakers) {
+-            idx++;
+             ArrayList<Segment> segments = spk.getArrayOfSegments();
+             for (Segment seg : segments)
+                 System.out.println(time(seg.getStartTime()) + " "
+-                        + time(seg.getLength()) + " Speaker" + idx);
+-        }
+-//        
+-//        ArrayList<Segment> s = speakers.get(0).getSpeakerIntervals();
+-//        ArrayList<Segment> s2 = speakers.get(0).getArrayOfSegments();
+-        
+-        
+-//        System.out.println("speaker intervals");
+-//        for(Segment seg : s)
+-//        	System.out.println(time(seg.getStartTime()) + " " + time(seg.getLength()) + " Speaker 1");
+-        
+-//        System.out.println("array of segments");
+-//        for(Segment seg : s2)
+-//        	System.out.println(time(seg.getStartTime()) + " " + time(seg.getLength()) + " Speaker 1");
+-        
++                        + time(seg.getLength()) + " Speaker" + (++idx));
++        }        
+     }
+ 
+-    public static void main(String[] args) throws IOException, UnsupportedAudioFileException, LineUnavailableException {
++    public static void main(String[] args) throws Exception {
++    	
++	  Configuration configuration = new Configuration();
++
++      configuration.setAcousticModelPath("resource:/edu/cmu/sphinx/models/acoustic/wsj");
++      configuration.setDictionaryPath("resource:/edu/cmu/sphinx/models/acoustic/wsj/dict/cmudict.0.6d");
++      configuration.setLanguageModelPath("resource:/edu/cmu/sphinx/models/language/en-us.lm.dmp");
++      
+     	
+         SpeakerIdentification sd = new SpeakerIdentification();
+     
+-        URL url = SpeakerIdentificationDemo.class.getResource("JamesCameron_2010_310.25_329.97.wav");
+-        
+-       
+-//       TargetDataLine line = null;
+-//       InputStream target1 = url.openStream();
+-//       AudioInputStream target2 = new AudioInputStream(line);
+-//       InputStream target3 = target2;
+-       
+-        // the AudioInputStream needs a TargetDataLine
+-//        AudioInputStream a = new AudioInputStream((TargetDataLine) url.openStream());
+-        
+-        // get the clusters from an InputStream
+-       
+-       
+-//       URL url2 = ClassLoader.getResource("/sounds/file.wav");
+-       AudioInputStream ais = AudioSystem.getAudioInputStream(url);
+-       Clip clip = AudioSystem.getClip();
+-       
+-       
+-       System.out.println("cool");
+-       
+-//        ArrayList<SpeakerCluster> clusters = sd.cluster(target1);
+-        
+-//        printSpeakerIntervals(clusters, url.getPath());
+-    
+-//        clusters.get(0).
+-        
+-        
+-        
+-        
+-        
+-        
++        URL url = SpeakerIdentificationDemo.class.getResource("out.wav");
++        ArrayList<SpeakerCluster> clusters = sd.cluster(url.openStream());
+         
++//        printSpeakerIntervals(clusters);
+         
++      StreamSpeechRecognizer recognizer = 
++      new StreamSpeechRecognizer(configuration);
++
++      
++//      recognizer.collectStatsFromChuncks(url);
++      recognizer.startRecognition(url, true);
++      recognizer.stopRecognition();
+         
++//        System.out.println("not cool");
++//        
++//        
++//        recognizer.findSpeakers(url.openStream());
++//        recognizer.profile.setPath("/home/gia/Work/mllr_matrix");
++//        
++//
++//        TimeFrame t;
++//        int size = clusters.get(0).getArrayOfSegments().size();
++        
++//        System.out.println("Collect Stats. create MATRIXES");
++//        for(Segment seg : clusters.get(0).getArrayOfSegments()) {
++//        	long startTime = seg.getStartTime();
++//        	long endTime   = seg.getStartTime() + seg.getLength();
++//        	
++//        	System.out.println("start time " + seg.getStartTime() + " length "+ seg.getLength());
++//        	t = new TimeFrame(startTime, endTime);
++//        	
++//        	// momentan doar culeg statisticile
++//        	
++//        	
++//        	if(size == 1) {
++//        		System.out.println("iaic");
++//        		recognizer.startRecognition(url.openStream(), true, t, false);
++//        	}
++//        	else {
++//        		System.out.println("merge");
++//        		recognizer.startRecognition(url.openStream(), true, t, true);
++//        	}
++//            recognizer.stopRecognition();
++//            size--;
++//        	
++//        }        
++        
++        
++//        for(Segment seg : clusters.get(0).getArrayOfSegments()) {
++//        	long startTime = seg.getStartTime();
++//        	long endTime   = seg.getStartTime() + seg.getLength();
++//        	
++//        	t = new TimeFrame(startTime, endTime);
++//        	
++//        	// momentan doar culeg statisticile
++//        	recognizer.startRecognition(url.openStream(), false, t, false);
++//        	
++//        	SpeechResult result;
++//
++//        	
++//            while ((result = recognizer.getResult()) != null) {
++//                System.out.format("Hypothesis: %s\n", result.getHypothesis());
++//            }
++//
++//            recognizer.stopRecognition();
++//        	
++//        } 
+     }
+ }
+diff --git a/sphinx4-samples/src/main/java/edu/cmu/sphinx/demo/transcriber/TranscriberDemo.java b/sphinx4-samples/src/main/java/edu/cmu/sphinx/demo/transcriber/TranscriberDemo.java
+index b77f48f..c5f6c59 100644
+--- a/sphinx4-samples/src/main/java/edu/cmu/sphinx/demo/transcriber/TranscriberDemo.java
++++ b/sphinx4-samples/src/main/java/edu/cmu/sphinx/demo/transcriber/TranscriberDemo.java
+@@ -12,10 +12,13 @@
+ package edu.cmu.sphinx.demo.transcriber;
+ 
+ import java.io.InputStream;
++import java.net.URL;
+ 
+ import edu.cmu.sphinx.api.Configuration;
+ import edu.cmu.sphinx.api.SpeechResult;
+ import edu.cmu.sphinx.api.StreamSpeechRecognizer;
++import edu.cmu.sphinx.demo.speakerid.SpeakerIdentificationDemo;
++import edu.cmu.sphinx.linguist.acoustic.tiedstate.Sphinx3Loader;
+ import edu.cmu.sphinx.result.WordResult;
+ 
+ 
+@@ -30,104 +33,53 @@ public class TranscriberDemo {
+ 
+         Configuration configuration = new Configuration();
+ 
+-        // Load model from the jar
+         configuration.setAcousticModelPath("resource:/edu/cmu/sphinx/models/acoustic/wsj");
+         
+-        // You can also load model from folder
+-        // configuration.setAcousticModelPath("file:en-us");
+-        
+         configuration.setDictionaryPath("resource:/edu/cmu/sphinx/models/acoustic/wsj/dict/cmudict.0.6d");
+         configuration.setLanguageModelPath("resource:/edu/cmu/sphinx/models/language/en-us.lm.dmp");
+         
+-        // If you want to use your own mllr_matrix
+-//         configuration.setAdaptationFile("/home/gia/Work/mllr_matrix");
+-
++        
++        URL url = SpeakerIdentificationDemo.class.getResource("test.wav");
++        
+         StreamSpeechRecognizer recognizer = 
+             new StreamSpeechRecognizer(configuration);
+-        InputStream stream = TranscriberDemo.class.getResourceAsStream(
+-                "/edu/cmu/sphinx/demo/MllrDecodingConfig/JamesCameron_2010_310.25_329.97.wav");
++        InputStream stream = url.openStream();
+         
+-        // If you want to use your own mllr_matrix
+-        // recognizer.startRecognition(stream)
+-        recognizer.startRecognition(stream);
+-
+-        SpeechResult result;
+-
+         
+-        System.out.println("The results with the unadapted model");
+-        while ((result = recognizer.getResult()) != null) {
+-        
+-            System.out.format("Hypothesis: %s\n",
+-                              result.getHypothesis());
+-                              
+-            System.out.println("List of recognized words and their times:");
+-            for (WordResult r : result.getWords()) {
+-        	System.out.println(r);
+-            }
+-
+-            System.out.println("Best 3 hypothesis:");            
+-            for (String s : result.getNbest(3))
+-                System.out.println(s);
+-
+-            System.out.println("Lattice contains " + result.getLattice().getNodes().size() + " nodes");
+-        }
++//        recognizer.startRecognition(stream);
++//
++//        SpeechResult result;
++//
++//        
++//        System.out.println("The results with the unadapted model");
++//        while ((result = recognizer.getResult()) != null) {
++//        
++//            System.out.format("Hypothesis: %s\n",
++//                              result.getHypothesis());
++//        }
++//
++//        recognizer.stopRecognition();
+ 
+-        recognizer.stopRecognition();
+-
+-        
+-        System.out.println("The results with the adapted model");
+         
+-        // the buffer is not available yet
+-        stream = TranscriberDemo.class.getResourceAsStream(
+-                    "/edu/cmu/sphinx/demo/MllrDecodingConfig/JamesCameron_2010_310.25_329.97.wav");
+-        
+-     
+-        recognizer.startRecognition(stream, true);
+-        System.out.println("REsult " + result);
+-        while ((result = recognizer.getResult()) != null) {
+-            
+-            System.out.format("Hypothesis: %s\n",
+-                              result.getHypothesis());
+-                              
+-            System.out.println("List of recognized words and their times:");
+-            for (WordResult r : result.getWords()) {
+-        	System.out.println(r);
+-            }
+-
+-            System.out.println("Best 3 hypothesis:");            
+-            for (String s : result.getNbest(3))
+-                System.out.println(s);
+-
+-            System.out.println("Lattice contains " + result.getLattice().getNodes().size() + " nodes");
+-        }
+-
+-        recognizer.stopRecognition();
++        System.out.println("Collect stats. Create Mllr Matrix");
++        stream = url.openStream();
++//        recognizer.startRecognition(stream, true);
++////        Sphinx3Loader loader = (Sphinx3Loader) recognizer.getLoader();
++//        recognizer.stopRecognition();
+     	
+ 
+-        stream = TranscriberDemo.class.getResourceAsStream(
+-                "/edu/cmu/sphinx/demo/countsCollector/BillGates_2010_554.62_564.32.wav");
+-        
+-        // Adapt offline with the new acoustic model
+-        recognizer.startRecognition(stream, false);
+-
+-        while ((result = recognizer.getResult()) != null) {
+-        
+-            System.out.format("Hypothesis: %s\n",
+-                              result.getHypothesis());
+-                              
+-            System.out.println("List of recognized words and their times:");
+-            for (WordResult r : result.getWords()) {
+-        	System.out.println(r);
+-            }
+-
+-            System.out.println("Best 3 hypothesis:");            
+-            for (String s : result.getNbest(3))
+-                System.out.println(s);
+-
+-            System.out.println("Lattice contains " + result.getLattice().getNodes().size() + " nodes");
+-        }
+-
+-        recognizer.stopRecognition();
++//        System.out.println("The results with the adapted model");
++//        stream = url.openStream();
++//        
++//        recognizer.startRecognition(stream, false);
++//
++//        while ((result = recognizer.getResult()) != null) {
++//        
++//            System.out.format("Hypothesis: %s\n",
++//                              result.getHypothesis());
++//        }
++//
++//        recognizer.stopRecognition();
+         
+     }
+ }

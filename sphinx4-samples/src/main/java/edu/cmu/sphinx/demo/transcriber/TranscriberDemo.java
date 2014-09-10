@@ -12,11 +12,15 @@
 package edu.cmu.sphinx.demo.transcriber;
 
 import java.io.InputStream;
+import java.net.URL;
 
 import edu.cmu.sphinx.api.Configuration;
 import edu.cmu.sphinx.api.SpeechResult;
 import edu.cmu.sphinx.api.StreamSpeechRecognizer;
+import edu.cmu.sphinx.demo.speakerid.SpeakerIdentificationDemo;
+import edu.cmu.sphinx.linguist.acoustic.tiedstate.Sphinx3Loader;
 import edu.cmu.sphinx.result.WordResult;
+import edu.cmu.sphinx.util.TimeFrame;
 
 
 /**
@@ -30,26 +34,26 @@ public class TranscriberDemo {
 
         Configuration configuration = new Configuration();
 
-        // Load model from the jar
         configuration.setAcousticModelPath("resource:/edu/cmu/sphinx/models/acoustic/wsj");
-        
-        // You can also load model from folder
-        // configuration.setAcousticModelPath("file:en-us");
         
         configuration.setDictionaryPath("resource:/edu/cmu/sphinx/models/acoustic/wsj/dict/cmudict.0.6d");
         configuration.setLanguageModelPath("resource:/edu/cmu/sphinx/models/language/en-us.lm.dmp");
         
-        // If you want to use your own mllr_matrix
-//         configuration.setAdaptationFile("/home/gia/Work/mllr_matrix");
-
+        
+        URL url = SpeakerIdentificationDemo.class.getResource("out.wav");
+        
         StreamSpeechRecognizer recognizer = 
             new StreamSpeechRecognizer(configuration);
-        InputStream stream = TranscriberDemo.class.getResourceAsStream(
-                "/edu/cmu/sphinx/demo/MllrDecodingConfig/JamesCameron_2010_310.25_329.97.wav");
+        InputStream stream = url.openStream();
         
-        // If you want to use your own mllr_matrix
-        // recognizer.startRecognition(stream)
-        recognizer.startRecognition(stream);
+        TimeFrame t;
+        
+        long startTime = 14640;
+        long endTime = 14640 + 24830;
+        
+        t = new TimeFrame(startTime, endTime);
+        
+        recognizer.startRecognition(stream, t);
 
         SpeechResult result;
 
@@ -59,75 +63,30 @@ public class TranscriberDemo {
         
             System.out.format("Hypothesis: %s\n",
                               result.getHypothesis());
-                              
-            System.out.println("List of recognized words and their times:");
-            for (WordResult r : result.getWords()) {
-        	System.out.println(r);
-            }
-
-            System.out.println("Best 3 hypothesis:");            
-            for (String s : result.getNbest(3))
-                System.out.println(s);
-
-            System.out.println("Lattice contains " + result.getLattice().getNodes().size() + " nodes");
         }
 
         recognizer.stopRecognition();
 
         
-        System.out.println("The results with the adapted model");
-        
-        // the buffer is not available yet
-        stream = TranscriberDemo.class.getResourceAsStream(
-                    "/edu/cmu/sphinx/demo/MllrDecodingConfig/JamesCameron_2010_310.25_329.97.wav");
-        
-     
-        recognizer.startRecognition(stream, true);
-        System.out.println("REsult " + result);
-        while ((result = recognizer.getResult()) != null) {
-            
-            System.out.format("Hypothesis: %s\n",
-                              result.getHypothesis());
-                              
-            System.out.println("List of recognized words and their times:");
-            for (WordResult r : result.getWords()) {
-        	System.out.println(r);
-            }
-
-            System.out.println("Best 3 hypothesis:");            
-            for (String s : result.getNbest(3))
-                System.out.println(s);
-
-            System.out.println("Lattice contains " + result.getLattice().getNodes().size() + " nodes");
-        }
-
-        recognizer.stopRecognition();
+//        System.out.println("Collect stats. Create Mllr Matrix");
+//        stream = url.openStream();
+//        recognizer.startRecognition(stream, true);
+////        Sphinx3Loader loader = (Sphinx3Loader) recognizer.getLoader();
+//        recognizer.stopRecognition();
     	
 
-        stream = TranscriberDemo.class.getResourceAsStream(
-                "/edu/cmu/sphinx/demo/countsCollector/BillGates_2010_554.62_564.32.wav");
-        
-        // Adapt offline with the new acoustic model
-        recognizer.startRecognition(stream, false);
-
-        while ((result = recognizer.getResult()) != null) {
-        
-            System.out.format("Hypothesis: %s\n",
-                              result.getHypothesis());
-                              
-            System.out.println("List of recognized words and their times:");
-            for (WordResult r : result.getWords()) {
-        	System.out.println(r);
-            }
-
-            System.out.println("Best 3 hypothesis:");            
-            for (String s : result.getNbest(3))
-                System.out.println(s);
-
-            System.out.println("Lattice contains " + result.getLattice().getNodes().size() + " nodes");
-        }
-
-        recognizer.stopRecognition();
+//        System.out.println("The results with the adapted model");
+//        stream = url.openStream();
+//        
+//        recognizer.startRecognition(stream, false);
+//
+//        while ((result = recognizer.getResult()) != null) {
+//        
+//            System.out.format("Hypothesis: %s\n",
+//                              result.getHypothesis());
+//        }
+//
+//        recognizer.stopRecognition();
         
     }
 }

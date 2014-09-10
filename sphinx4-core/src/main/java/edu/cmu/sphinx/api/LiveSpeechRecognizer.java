@@ -47,7 +47,7 @@ public class LiveSpeechRecognizer extends AbstractSpeechRecognizer {
         microphone.startRecording();
         if (collectStatsForAdaptation){
         	try {
-				this.initAdaptation();
+//				this.initAdaptation();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

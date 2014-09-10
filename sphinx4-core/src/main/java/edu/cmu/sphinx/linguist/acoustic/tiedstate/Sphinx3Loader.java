@@ -436,15 +436,15 @@ public class Sphinx3Loader implements Loader {
 
         modelProps = loadModelProps(dataLocation + "feat.params");
         
-        if(adaptation != null) {
-        	MllrDecoding mllrd = new MllrDecoding(this, adaptation);
-        	try {
-				mllrd.decodeWithMllr();
-			} catch (URISyntaxException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-        }
+//        if(adaptation != null) {
+//        	MllrDecoding mllrd = new MllrDecoding(this, adaptation);
+//        	try {
+//				mllrd.decodeWithMllr();
+//			} catch (URISyntaxException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//        }
     }
 
     public Map<String, Unit> getContextIndependentUnits() {

@@ -423,4 +423,8 @@ public final class LogMath {
             out[i] = (float)logToLinear(vector[i]);
         }
     }
+
+	public static LogMath getInstance() {
+		return instance;
+	}
 }
